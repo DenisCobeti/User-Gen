@@ -17,6 +17,7 @@ import hashlib
 import random
 import json
 import argparse
+import sys
 from os import path
 
 """  Class that generates most things needed for a user: email, username and password """
@@ -53,7 +54,7 @@ class UserGenerator:
 		ending = len(user) % MAX_END_lEN
 		passwd += passwd[:ending] + '?'
 
-		# Aapitalize the first found letter
+		# Capitalize the first found letter
 		for i, char in enumerate(passwd):
 			if(char.isalpha()):
 				passwd = passwd [:i] + passwd[i:].capitalize()
@@ -184,16 +185,6 @@ class UserGenerator:
 
 if __name__ == "__main__":
 
-	file_names = open('names.json').read()
-	file_joiner = open('joiner.json').read()
-	file_suffix = open('suffixes.json').read()
-	file_prefix = open('prefixes.json').read()
-
-	names = json.loads(file_names)
-	joiner = json.loads(file_joiner)
-	suffixes = json.loads(file_suffix)
-	prefixes = json.loads(file_prefix)
-
 	my_parser = argparse.ArgumentParser(description='Generates user names, emails and passwords in JSON format')
 	# Add the arguments
 	my_parser.add_argument('Count', metavar='Count', type=int, 
@@ -201,17 +192,46 @@ if __name__ == "__main__":
 	my_parser.add_argument('-p', '--passwd', action='store', metavar='USERNAME',
 							help='check the password of the inputed user name')
 	my_parser.add_argument('-o', '--output', action='store', metavar='PATH',
-							help='file to output the users', default='export.json')
+							help='file to output the users in JSON format', default='export.json')
+	my_parser.add_argument('-n', '--names', action='store', metavar='PATH',
+							help='JSON file with various names and surnames', default='names.json')
+	my_parser.add_argument('-j', '--joiner', action='store', metavar='PATH',
+							help='JSON file with joiners of names and surnames', default='joiner.json')
+	my_parser.add_argument('-su', '--suffix', action='store', metavar='PATH',
+							help='file with various suffixes added to the usernames', default='suffixes.json')
+	my_parser.add_argument('-pre', '--prefix', action='store', metavar='PATH',
+							help='file with various prefixes added to the usernames', default='prefixes.json')
 	args = my_parser.parse_args()
 
 	count = args.Count
 	check_password = args.passwd
 	output = args.output
-	
-	generator = UserGenerator(names, prefixes, suffixes, joiner)
 
-	if check_password is not None:
-		print (generator.genPassword(check_password))
-	if count != 0:
-		print(generator.exportUsersJson(count, output))
+	try:
+		file_names = open(args.names).read()
+		file_joiner = open(args.joiner).read()
+		file_suffix = open(args.suffix).read()
+		file_prefix = open(args.prefix).read()
+
+		names = json.loads(file_names)
+		joiner = json.loads(file_joiner)
+		suffixes = json.loads(file_suffix)
+		prefixes = json.loads(file_prefix)
+
+	except IOError as error:
+		print("Couldn´t open file: " + error.filename, file=sys.stderr)
+		sys.exit(1)
+
+	except (json.JSONDecodeError, TypeError) as JSONError:
+		print(JSONError, file=sys.stderr)
+		sys.exit(2)
+		
+	finally:
+
+		generator = UserGenerator(names, prefixes, suffixes, joiner)
+
+		if check_password is not None:
+			print (generator.genPassword(check_password))
+		if count != 0:
+			print(generator.exportUsersJson(count, output))
 
